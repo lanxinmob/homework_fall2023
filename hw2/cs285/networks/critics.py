@@ -46,8 +46,8 @@ class ValueCritic(nn.Module):
 
         # TODO: update the critic using the observations and q_values
         loss = F.mse_loss(
-            self(obs),
-            q_values,
+            self(obs).squeeze(),
+            q_values.squeeze(),
             reduction="mean",
         )
         return {
