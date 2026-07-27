@@ -157,11 +157,15 @@ class PGAgent(nn.Module):
         Note that all entries of the output list should be the exact same because each sum is from 0 to T (and doesn't
         involve t)!
         """
-        discounted_return = sum(
-        (self.gamma ** t) * reward
-        for t, reward in enumerate(rewards)
-        )    
-        return [discounted_return]*len(rewards)
+        rewards = torch.as_tensor(rewards, dtype=torch.float64)
+        discounts = self.gamma ** torch.arange(
+            rewards.shape[0],
+            dtype=rewards.dtype,
+            device=rewards.device,
+        )
+        discounted_return = torch.sum(rewards * discounts).item()
+
+        return [discounted_return] * rewards.shape[0]
 
 
     def _discounted_reward_to_go(self, rewards: Sequence[float]) -> Sequence[float]:
@@ -169,11 +173,20 @@ class PGAgent(nn.Module):
         Helper function which takes a list of rewards {r_0, r_1, ..., r_t', ... r_T} and returns a list where the entry
         in each index t' is sum_{t'=t}^T gamma^(t'-t) * r_{t'}.
         """
-        list = []
-        running_return = 0
-        for t in reversed(range(len(rewards))):
-            running_return = rewards[t] + self.gamma * running_return
-            list.append(running_return)
+        rewards = torch.as_tensor(rewards, dtype=torch.float64)
+        discounts = self.gamma ** torch.arange(
+        rewards.shape[0],
+        dtype=rewards.dtype,
+        device=rewards.device,
+        )
 
-        list.reverse()
-        return list
+        discounted_rewards = rewards * discounts
+        reward_to_go = torch.flip(
+            torch.cumsum(
+                torch.flip(discounted_rewards, dims=[0]),
+                dim=0,
+            ),
+            dims=[0],
+        ) / discounts
+
+        return reward_to_go.cpu().numpy()

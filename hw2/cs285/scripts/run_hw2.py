@@ -28,6 +28,9 @@ def run_training_loop(args):
 
     # make the gym environment
     env = gym.make(args.env_name, render_mode=None)
+    #from gym.vector import AsyncVectorEnv          
+    #num_envs = 16  
+    #env = AsyncVectorEnv([ lambda: gym.make(args.env_name, render_mode=None) for _ in range(num_envs)])
     discrete = isinstance(env.action_space, gym.spaces.Discrete)
 
     # add action noise, if needed
