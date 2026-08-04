@@ -68,16 +68,19 @@ def run_training_loop(config: dict, logger: Logger, args: argparse.Namespace):
             action = env.action_space.sample()
         else:
             # TODO(student): Select an action
-            action = ...
+            action = agent.get_action(observation)
 
         # Step the environment and add the data to the replay buffer
         next_observation, reward, done, info = env.step(action)
+        next_observation = np.asarray(next_observation)
+        terminal = done and not info.get("TimeLimit.truncated", False)
+
         replay_buffer.insert(
             observation=observation,
             action=action,
             reward=reward,
             next_observation=next_observation,
-            done=done and not info.get("TimeLimit.truncated", False),
+            done=terminal,
         )
 
         if done:
@@ -90,8 +93,19 @@ def run_training_loop(config: dict, logger: Logger, args: argparse.Namespace):
         # Train the agent
         if step >= config["training_starts"]:
             # TODO(student): Sample a batch of config["batch_size"] transitions from the replay buffer
-            batch = ...
-            update_info = ...
+            batch = replay_buffer.sample(config["batch_size"])
+            batch = {
+                key: ptu.from_numpy(value)
+                for key, value in batch.items()
+            }
+            update_info = agent.update( 
+            observations=batch["observations"],
+            actions=batch["actions"],
+            rewards=batch["rewards"],
+            next_observations=batch["next_observations"],
+            dones=batch["dones"],
+            step=step,
+            )
 
             # Logging
             update_info["actor_lr"] = agent.actor_lr_scheduler.get_last_lr()[0]
